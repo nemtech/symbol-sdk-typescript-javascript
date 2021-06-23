@@ -4,6 +4,7 @@ export * from './AccountService';
 export * from './AggregateTransactionService';
 export * from './BlockService';
 export * from './CurrencyService';
+export * from './DeadlineService';
 export * from './interfaces';
 export * from './MetadataTransactionService';
 export * from './MosaicAmountView';

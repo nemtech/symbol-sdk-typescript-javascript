@@ -16,22 +16,22 @@
 
 import { ChronoUnit } from '@js-joda/core';
 import { expect } from 'chai';
-import { EMPTY, of as observableOf } from 'rxjs';
+import { EMPTY, from, of as observableOf } from 'rxjs';
 import { deepEqual, instance, mock, when } from 'ts-mockito';
-import { IListener } from '../../src/infrastructure/IListener';
-import { ReceiptRepository } from '../../src/infrastructure/ReceiptRepository';
-import { TransactionRepository } from '../../src/infrastructure/TransactionRepository';
+import { IListener, ReceiptRepository, TransactionRepository } from '../../src/infrastructure';
+import { UInt64 } from '../../src/model';
 import { Account, Address } from '../../src/model/account';
-import { PlainMessage } from '../../src/model/message/PlainMessage';
-import { NetworkType } from '../../src/model/network/NetworkType';
-import { AggregateTransaction } from '../../src/model/transaction/AggregateTransaction';
-import { Deadline } from '../../src/model/transaction/Deadline';
-import { HashLockTransaction } from '../../src/model/transaction/HashLockTransaction';
-import { TransactionAnnounceResponse } from '../../src/model/transaction/TransactionAnnounceResponse';
-import { TransactionStatusError } from '../../src/model/transaction/TransactionStatusError';
-import { TransferTransaction } from '../../src/model/transaction/TransferTransaction';
-import { UInt64 } from '../../src/model/UInt64';
-import { TransactionService } from '../../src/service/TransactionService';
+import { PlainMessage } from '../../src/model/message';
+import { NetworkType } from '../../src/model/network';
+import {
+    AggregateTransaction,
+    Deadline,
+    HashLockTransaction,
+    TransactionAnnounceResponse,
+    TransactionStatusError,
+    TransferTransaction,
+} from '../../src/model/transaction';
+import { TransactionService } from '../../src/service';
 import { NetworkCurrencyLocal } from '../model/mosaic/Currency.spec';
 
 /**
@@ -79,6 +79,30 @@ describe('TransactionService', () => {
         transactionRepositoryMock = mock();
         mockedReceiptRepository = mock();
         listener = mock();
+    });
+
+    it('announce transaction when reject promise', async () => {
+        const signedTransaction = account.sign(transferTransaction, generationHash);
+        when(transactionRepositoryMock.announce(deepEqual(signedTransaction))).thenReturn(from(Promise.reject(Error('break this!'))));
+        const service = new TransactionService(instance(transactionRepositoryMock), instance(mockedReceiptRepository));
+        try {
+            await service.announce(signedTransaction, instance(listener)).toPromise();
+            expect(false).true;
+        } catch (e) {
+            expect(e.message).eq('break this!');
+        }
+    });
+
+    it('announce transaction when exception', async () => {
+        const signedTransaction = account.sign(transferTransaction, generationHash);
+        when(transactionRepositoryMock.announce(deepEqual(signedTransaction))).thenThrow(Error('break this!'));
+        const service = new TransactionService(instance(transactionRepositoryMock), instance(mockedReceiptRepository));
+        try {
+            await service.announce(signedTransaction, instance(listener)).toPromise();
+            expect(false).true;
+        } catch (e) {
+            expect(e.message).eq('break this!');
+        }
     });
 
     it('announce when valid transaction', async () => {

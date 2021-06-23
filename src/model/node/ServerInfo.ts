@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { Deployment } from './Deployment';
+
 /**
  * The server information.
  */
@@ -21,15 +23,20 @@ export class ServerInfo {
     /**
      * @param restVersion - The catapult-rest component version
      * @param sdkVersion - the catapult-sdk component version
+     * @param deployment - the deployment information.
      */
     constructor(
         /**
-         * The catapult-rest component version
+         * restVersion The catapult-rest component version
          */
         public readonly restVersion: string,
         /**
-         * the catapult-sdk component version
+         * sdkVersion the catapult-sdk component version
          */
         public readonly sdkVersion: string,
+        /**
+         * deployment The deployment information that helps tracking how the node was created.
+         */
+        public readonly deployment: Deployment | undefined,
     ) {}
 }

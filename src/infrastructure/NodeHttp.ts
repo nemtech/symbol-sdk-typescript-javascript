@@ -19,6 +19,7 @@ import { NodeInfoDTO, NodeRoutesApi } from 'symbol-openapi-typescript-fetch-clie
 import { UInt64 } from '../model';
 import { StorageInfo } from '../model/blockchain';
 import { NodeHealth, NodeInfo, NodeTime, RoleType, ServerInfo } from '../model/node';
+import { Deployment } from '../model/node/Deployment';
 import { Http } from './Http';
 import { NodeRepository } from './NodeRepository';
 
@@ -95,7 +96,18 @@ export class NodeHttp extends Http implements NodeRepository {
     public getServerInfo(): Observable<ServerInfo> {
         return this.call(
             this.nodeRoutesApi.getServerInfo(),
-            (body) => new ServerInfo(body.serverInfo.restVersion, body.serverInfo.sdkVersion),
+            (body) =>
+                new ServerInfo(
+                    body.serverInfo.restVersion,
+                    body.serverInfo.sdkVersion,
+                    body.serverInfo?.deployment
+                        ? new Deployment(
+                              body.serverInfo.deployment.deploymentTool,
+                              body.serverInfo.deployment.deploymentToolVersion,
+                              body.serverInfo.deployment.lastUpdatedDate,
+                          )
+                        : undefined,
+                ),
         );
     }
 

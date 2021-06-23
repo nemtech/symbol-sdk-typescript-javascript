@@ -391,4 +391,29 @@ describe('Transaction', () => {
         expect((tx as Transaction).isSigned(account.address)).to.be.true;
         expect((tx as Transaction).isSigned(Address.createFromRawAddress('VATNE7Q5BITMUTRRN6IB4I7FLSDRDWZA35C4KNQ'))).to.be.false;
     });
+
+    it('should prepare valid transaction payload', () => {
+        const tx = TransferTransaction.create(
+            Deadline.createFromDTO('1'),
+            Address.createFromRawAddress('VATNE7Q5BITMUTRRN6IB4I7FLSDRDWZA35C4KNQ'),
+            [],
+            PlainMessage.create('test-message'),
+            NetworkType.PRIVATE_TEST,
+        ) as Transaction;
+        const expectedPayload =
+            'AD00000000000000F5CEC2900A317ED93F5BC6621AE11FF960E07BD9D780CF625EA49FD8F073973EB4DF2598B089CC78A6C48519138EB1CC0A0927467D1925838DDA074C6C81170F9801508C58666C746F471538E43002B85B1CD542F9874B2861183919BA8787B60000000001A8544100000000000000000100000000000000A826D27E1D0A26CA4E316F901E23E55C8711DB20DF45C5360D0000000000000000746573742D6D657373616765';
+        const signature =
+            'F5CEC2900A317ED93F5BC6621AE11FF960E07BD9D780CF625EA49FD8F073973EB4DF2598B089CC78A6C48519138EB1CC0A0927467D1925838DDA074C6C81170F';
+        const payload = Transaction.preparePayload(Convert.hexToUint8(tx.serialize()), Convert.hexToUint8(signature), account.publicKey);
+        expect(payload).to.be.eq(expectedPayload);
+    });
+
+    it('should sign raw transaction and produce a valid signature', () => {
+        const txSigningBytes =
+            '57F7DA205008026C776CB6AED843393F04CD458E0AA2D9F1D5F31A402072B2D601A8544100000000000000000100000000000000A826D27E1D0A26CA4E316F901E23E55C8711DB20DF45C5360D0000000000000000746573742D6D657373616765';
+        const expectedSignature =
+            'F5CEC2900A317ED93F5BC6621AE11FF960E07BD9D780CF625EA49FD8F073973EB4DF2598B089CC78A6C48519138EB1CC0A0927467D1925838DDA074C6C81170F';
+        const signature = Transaction.signRawTransaction(account.privateKey, Convert.hexToUint8(txSigningBytes));
+        expect(Convert.uint8ToHex(signature)).to.be.eq(expectedSignature);
+    });
 });

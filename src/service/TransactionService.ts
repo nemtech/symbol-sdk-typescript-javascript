@@ -15,30 +15,29 @@
  */
 
 import { combineLatest, merge, Observable, of } from 'rxjs';
-import { first, flatMap, map, mergeMap, toArray } from 'rxjs/operators';
-import { IListener } from '../infrastructure/IListener';
-import { ReceiptPaginationStreamer } from '../infrastructure/paginationStreamer/ReceiptPaginationStreamer';
-import { ReceiptRepository } from '../infrastructure/ReceiptRepository';
-import { TransactionGroup } from '../infrastructure/TransactionGroup';
-import { TransactionRepository } from '../infrastructure/TransactionRepository';
-import { Address } from '../model/account/Address';
-import { NamespaceId } from '../model/namespace/NamespaceId';
-import { Statement } from '../model/receipt/Statement';
-import { AccountAddressRestrictionTransaction } from '../model/transaction/AccountAddressRestrictionTransaction';
-import { AggregateTransaction } from '../model/transaction/AggregateTransaction';
-import { LockFundsTransaction } from '../model/transaction/LockFundsTransaction';
-import { MosaicAddressRestrictionTransaction } from '../model/transaction/MosaicAddressRestrictionTransaction';
-import { MosaicGlobalRestrictionTransaction } from '../model/transaction/MosaicGlobalRestrictionTransaction';
-import { MosaicMetadataTransaction } from '../model/transaction/MosaicMetadataTransaction';
-import { MosaicSupplyChangeTransaction } from '../model/transaction/MosaicSupplyChangeTransaction';
-import { SecretLockTransaction } from '../model/transaction/SecretLockTransaction';
-import { SecretProofTransaction } from '../model/transaction/SecretProofTransaction';
-import { SignedTransaction } from '../model/transaction/SignedTransaction';
-import { Transaction } from '../model/transaction/Transaction';
-import { TransactionStatusError } from '../model/transaction/TransactionStatusError';
-import { TransactionType } from '../model/transaction/TransactionType';
-import { TransferTransaction } from '../model/transaction/TransferTransaction';
-import { ITransactionService } from './interfaces/ITransactionService';
+import { first, map, mergeMap, toArray } from 'rxjs/operators';
+import { IListener, ReceiptRepository, TransactionGroup, TransactionRepository } from '../infrastructure';
+import { ReceiptPaginationStreamer } from '../infrastructure/paginationStreamer';
+import { Address } from '../model/account';
+import { NamespaceId } from '../model/namespace';
+import { Statement } from '../model/receipt';
+import {
+    AccountAddressRestrictionTransaction,
+    AggregateTransaction,
+    LockFundsTransaction,
+    MosaicAddressRestrictionTransaction,
+    MosaicGlobalRestrictionTransaction,
+    MosaicMetadataTransaction,
+    MosaicSupplyChangeTransaction,
+    SecretLockTransaction,
+    SecretProofTransaction,
+    SignedTransaction,
+    Transaction,
+    TransactionStatusError,
+    TransactionType,
+    TransferTransaction,
+} from '../model/transaction';
+import { ITransactionService } from './interfaces';
 
 /**
  * Transaction Service
@@ -73,13 +72,18 @@ export class TransactionService implements ITransactionService {
      */
     public announce(signedTransaction: SignedTransaction, listener: IListener): Observable<Transaction> {
         const signerAddress = signedTransaction.getSignerAddress();
-        this.transactionRepository.announce(signedTransaction);
-        return this.getTransactionOrRaiseError(
-            listener,
-            signerAddress,
-            signedTransaction.hash,
-            listener.confirmed(signerAddress, signedTransaction.hash),
-        );
+        return this.transactionRepository
+            .announce(signedTransaction)
+            .pipe(
+                mergeMap(() =>
+                    this.getTransactionOrRaiseError(
+                        listener,
+                        signerAddress,
+                        signedTransaction.hash,
+                        listener.confirmed(signerAddress, signedTransaction.hash),
+                    ),
+                ),
+            );
     }
 
     /**
@@ -93,7 +97,7 @@ export class TransactionService implements ITransactionService {
         const signerAddress = signedTransaction.getSignerAddress();
         const transactionObservable = this.transactionRepository
             .announceAggregateBonded(signedTransaction)
-            .pipe(flatMap(() => listener.aggregateBondedAdded(signerAddress, signedTransaction.hash)));
+            .pipe(mergeMap(() => listener.aggregateBondedAdded(signerAddress, signedTransaction.hash)));
         return this.getTransactionOrRaiseError(listener, signerAddress, signedTransaction.hash, transactionObservable);
     }
 
@@ -113,7 +117,7 @@ export class TransactionService implements ITransactionService {
         listener: IListener,
     ): Observable<AggregateTransaction> {
         return this.announce(signedHashLockTransaction, listener).pipe(
-            flatMap(() => this.announceAggregateBonded(signedAggregateTransaction, listener)),
+            mergeMap(() => this.announceAggregateBonded(signedAggregateTransaction, listener)),
         );
     }
 

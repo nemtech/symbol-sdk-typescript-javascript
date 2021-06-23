@@ -70,6 +70,27 @@ describe('NodeHttp', () => {
         expect(serverInfo).to.be.not.null;
         expect(serverInfo.restVersion).to.be.equals(body.serverInfo.restVersion);
         expect(serverInfo.sdkVersion).to.be.equals(body.serverInfo.sdkVersion);
+        expect(serverInfo.deployment).to.be.undefined;
+    });
+
+    it('getServerInfo with deployment', async () => {
+        const body: ServerInfoDTO = {
+            serverInfo: {
+                restVersion: 'Some Rest Version',
+                sdkVersion: 'Some SDK Version',
+                deployment: {
+                    deploymentTool: 'symbol-bootstrap',
+                    deploymentToolVersion: '1.0.6-alpha-202105280712',
+                    lastUpdatedDate: '2021-06-02',
+                },
+            },
+        };
+
+        when(nodeRoutesApi.getServerInfo()).thenReturn(Promise.resolve(body));
+        const serverInfo = await nodeRepository.getServerInfo().toPromise();
+        expect(serverInfo).to.be.not.null;
+        expect(serverInfo.restVersion).to.be.equals(body.serverInfo.restVersion);
+        expect(serverInfo.deployment).to.be.deep.equals(body.serverInfo.deployment);
     });
 
     it('getNodeInfo', async () => {

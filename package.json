@@ -112,7 +112,7 @@
         "ripemd160": "^2.0.2",
         "rxjs": "^6.6.3",
         "rxjs-compat": "^6.6.3",
-        "symbol-openapi-typescript-fetch-client": "0.11.2",
+        "symbol-openapi-typescript-fetch-client": "1.0.1-SNAPSHOT.202106160954",
         "tweetnacl": "^1.0.3",
         "utf8": "^2.1.2",
         "ws": "^7.3.1"

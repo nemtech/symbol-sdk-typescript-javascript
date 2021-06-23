@@ -291,8 +291,9 @@ describe('SerializeTransactionToJSON', () => {
     });
 
     it('should create AggregatedTransaction - Complete', () => {
+        const deadline = Deadline.create(epochAdjustment);
         const transferTransaction = TransferTransaction.create(
-            Deadline.create(epochAdjustment),
+            deadline,
             Address.createFromRawAddress('VATNE7Q5BITMUTRRN6IB4I7FLSDRDWZA35C4KNQ'),
             [],
             PlainMessage.create('test-message'),
@@ -300,7 +301,7 @@ describe('SerializeTransactionToJSON', () => {
         );
 
         const aggregateTransaction = AggregateTransaction.createComplete(
-            Deadline.create(epochAdjustment),
+            deadline,
             [transferTransaction.toAggregate(account.publicAccount)],
             NetworkType.PRIVATE_TEST,
             [],
@@ -313,8 +314,9 @@ describe('SerializeTransactionToJSON', () => {
     });
 
     it('should create AggregatedTransaction - Bonded', () => {
+        const deadline = Deadline.create(epochAdjustment);
         const transferTransaction = TransferTransaction.create(
-            Deadline.create(epochAdjustment),
+            deadline,
             Address.createFromRawAddress('VATNE7Q5BITMUTRRN6IB4I7FLSDRDWZA35C4KNQ'),
             [],
             PlainMessage.create('test-message'),
@@ -322,7 +324,7 @@ describe('SerializeTransactionToJSON', () => {
         );
 
         const aggregateTransaction = AggregateTransaction.createBonded(
-            Deadline.create(epochAdjustment),
+            deadline,
             [transferTransaction.toAggregate(account.publicAccount)],
             NetworkType.PRIVATE_TEST,
             [],
