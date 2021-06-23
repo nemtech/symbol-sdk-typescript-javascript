@@ -15,8 +15,8 @@
  */
 
 import { KeyPair } from '../../core/crypto';
-import { Convert } from '../../core/format/Convert';
-import { Account } from '../account/Account';
+import { Convert } from '../../core/format';
+import { Account } from '../account';
 import { AggregateTransaction } from './AggregateTransaction';
 import { CosignatureSignedTransaction } from './CosignatureSignedTransaction';
 import { Transaction } from './Transaction';
@@ -53,14 +53,22 @@ export class CosignatureTransaction {
      * @returns {CosignatureSignedTransaction}
      */
     public static signTransactionPayload(account: Account, payload: string, generationHash: string): CosignatureSignedTransaction {
-        /**
-         * For aggregated complete transaction, cosignatories are gathered off chain announced.
-         */
         const transactionHash = Transaction.createTransactionHash(payload, Array.from(Convert.hexToUint8(generationHash)));
+        return this.signTransactionHash(account, transactionHash);
+    }
+
+    /**
+     * Co-sign transaction with transaction hash (off chain)
+     * Creating a new CosignatureSignedTransaction
+     * @param account - The signing account
+     * @param transactionHash - The hash of the aggregate transaction to be cosigned
+     * @returns {CosignatureSignedTransaction}
+     */
+    public static signTransactionHash(account: Account, transactionHash: string): CosignatureSignedTransaction {
         const hashBytes = Convert.hexToUint8(transactionHash);
         const keyPairEncoded = KeyPair.createKeyPairFromPrivateKeyString(account.privateKey);
         const signature = KeyPair.sign(keyPairEncoded, new Uint8Array(hashBytes));
-        return new CosignatureSignedTransaction(Convert.uint8ToHex(hashBytes), Convert.uint8ToHex(signature), account.publicKey);
+        return new CosignatureSignedTransaction(transactionHash, Convert.uint8ToHex(signature), account.publicKey);
     }
 
     /**
@@ -70,13 +78,10 @@ export class CosignatureTransaction {
      * @returns {CosignatureSignedTransaction}
      */
     public signWith(account: Account, transactionHash?: string): CosignatureSignedTransaction {
-        if ((!this.transactionToCosign.transactionInfo || !this.transactionToCosign.transactionInfo!.hash) && !transactionHash) {
+        const hash = transactionHash || this.transactionToCosign.transactionInfo?.hash;
+        if (!hash) {
             throw new Error('Transaction to cosign should be announced first');
         }
-        const hash = !transactionHash ? this.transactionToCosign.transactionInfo!.hash : transactionHash;
-        const hashBytes = Convert.hexToUint8(hash ? hash : '');
-        const keyPairEncoded = KeyPair.createKeyPairFromPrivateKeyString(account.privateKey);
-        const signature = KeyPair.sign(keyPairEncoded, new Uint8Array(hashBytes));
-        return new CosignatureSignedTransaction(hash ? hash : '', Convert.uint8ToHex(signature), account.publicKey);
+        return CosignatureTransaction.signTransactionHash(account, hash);
     }
 }
