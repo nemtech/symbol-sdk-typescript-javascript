@@ -18,7 +18,8 @@ import { Observable, of, Subject } from 'rxjs';
 import { catchError, distinctUntilChanged, filter, map, mergeMap, share, switchMap } from 'rxjs/operators';
 import { BlockInfoDTO } from 'symbol-openapi-typescript-fetch-client';
 import * as WebSocket from 'ws';
-import { UnresolvedAddress } from '../model';
+import { MultisigGraphUtils } from '../../src/core/utils';
+import { MultisigAccountInfo, UnresolvedAddress } from '../model';
 import { Address } from '../model/account/Address';
 import { PublicAccount } from '../model/account/PublicAccount';
 import { FinalizedBlock } from '../model/blockchain/FinalizedBlock';
@@ -34,7 +35,6 @@ import { MultisigHttp } from './MultisigHttp';
 import { MultisigRepository } from './MultisigRepository';
 import { NamespaceRepository } from './NamespaceRepository';
 import { CreateTransactionFromDTO } from './transaction/CreateTransactionFromDTO';
-
 export enum ListenerChannelName {
     block = 'block',
     confirmedAdded = 'confirmedAdded',
@@ -596,9 +596,20 @@ export class Listener implements IListener {
         }
         return this.getResolvedAddress(cosigner).pipe(
             mergeMap((address: Address) => {
-                return this.multisigRepository!.getMultisigAccountInfo(address).pipe(
+                return this.multisigRepository!.getMultisigAccountGraphInfo(address).pipe(
                     map((multisigInfo) => {
-                        const subscribers = [cosigner].concat(multisigInfo.multisigAddresses);
+                        const multisigGraphInfo: MultisigAccountInfo[][] = MultisigGraphUtils.getMultisigInfoFromMultisigGraphInfo(
+                            multisigInfo,
+                        );
+                        const multisigChildren: Array<{ address: string; children: string[] }> = MultisigGraphUtils.getMultisigChildren(
+                            multisigGraphInfo,
+                        );
+                        const subscribers: Address[] = [address];
+                        if (!!multisigChildren.length && multisigChildren[0].children) {
+                            MultisigGraphUtils.parseObjectProperties(multisigChildren[0].children, (k, prop: string) => {
+                                subscribers.push(Address.createFromRawAddress(prop));
+                            });
+                        }
                         subscribers.forEach((m) => {
                             this.subscribeTo(`${channel.toString()}/${m.plain()}`);
                         });

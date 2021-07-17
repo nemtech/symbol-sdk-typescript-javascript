@@ -110,7 +110,7 @@
         "minimist": "^1.2.5",
         "node-fetch": "^2.6.0",
         "ripemd160": "^2.0.2",
-        "rxjs": "^6.6.3",
+        "rxjs": "^6.6.7",
         "rxjs-compat": "^6.6.3",
         "symbol-openapi-typescript-fetch-client": "1.0.1-SNAPSHOT.202106160954",
         "tweetnacl": "^1.0.3",

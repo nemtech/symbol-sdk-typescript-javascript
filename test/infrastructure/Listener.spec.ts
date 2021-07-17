@@ -18,7 +18,7 @@ import { deepEqual } from 'assert';
 import { expect } from 'chai';
 import { Observable, of as observableOf } from 'rxjs';
 import { deepEqual as deepEqualParam, instance, mock, verify, when } from 'ts-mockito';
-import { UnresolvedAddress } from '../../src';
+import { MultisigAccountGraphInfo, UnresolvedAddress } from '../../src';
 import { Listener, ListenerChannelName } from '../../src/infrastructure/Listener';
 import { MultisigRepository } from '../../src/infrastructure/MultisigRepository';
 import { NamespaceRepository } from '../../src/infrastructure/NamespaceRepository';
@@ -43,7 +43,29 @@ describe('Listener', () => {
         '26b64cb10f005e5988a36744ca19e20d835ccc7c105aaa5f3b212da593180930',
         NetworkType.PRIVATE_TEST,
     );
+    const account1 = Address.createFromPublicKey(
+        '68B3FBB18729C1FDE225C57F8CE080FA828F0067E451A3FD81FA628842B0B763',
+        NetworkType.PRIVATE_TEST,
+    );
+    const account2 = Address.createFromPublicKey(
+        'DAB1C38C3E1642494FCCB33138B95E81867B5FB59FC4277A1D53761C8B9F6D14',
+        NetworkType.PRIVATE_TEST,
+    );
 
+    const account3 = Address.createFromPublicKey(
+        '1674016C27FE2C2EB5DFA73996FA54A183B38AED0AA64F756A3918BAF08E061B',
+        NetworkType.PRIVATE_TEST,
+    );
+
+    const multisig1 = Address.createFromPublicKey(
+        'B694186EE4AB0558CA4AFCFDD43B42114AE71094F5A1FC4A913FE9971CACD21D',
+        NetworkType.PRIVATE_TEST,
+    );
+
+    const multisig2 = Address.createFromPublicKey(
+        'CF893FFCC47C33E7F68AB1DB56365C156B0736824A0C1E273F9E00B8DF8F01EB',
+        NetworkType.PRIVATE_TEST,
+    );
     let namespaceRepoMock: NamespaceRepository;
     let namespaceRepo: NamespaceRepository;
     let multisigRepoMock: MultisigRepository;
@@ -57,6 +79,14 @@ describe('Listener', () => {
         multisigRepo = instance(multisigRepoMock);
     });
 
+    function givenMultisig2AccountGraphInfo(): MultisigAccountGraphInfo {
+        const map = new Map<number, MultisigAccountInfo[]>();
+        map.set(0, [new MultisigAccountInfo(1, multisig2, 2, 1, [multisig1, account1], [])]).set(1, [
+            new MultisigAccountInfo(1, multisig1, 1, 1, [account2, account3], [multisig2]),
+        ]);
+
+        return new MultisigAccountGraphInfo(map);
+    }
     it('should createComplete a WebSocket instance given url parameter', () => {
         const listener = new Listener('http://localhost:3000/ws', namespaceRepo, epochAdjustment);
         expect('http://localhost:3000/ws').to.be.equal(listener.url);
@@ -215,7 +245,6 @@ describe('Listener', () => {
 
     [ListenerChannelName.confirmedAdded, ListenerChannelName.partialAdded, ListenerChannelName.unconfirmedAdded].forEach((name) => {
         const subscribedAddress = account.address;
-        const multisigAccount = Account.generateNewAccount(NetworkType.PRIVATE_TEST);
         class WebSocketMock {
             constructor(public readonly url: string) {}
             send(payload: string): void {
@@ -259,14 +288,15 @@ describe('Listener', () => {
         describe(`${name} transaction subscription`, () => {
             it('subscribe multsig', () => {
                 const alias = new NamespaceId('test');
-                const multisigInfo = new MultisigAccountInfo(1, subscribedAddress, 1, 1, [], [multisigAccount.address]);
-                when(multisigRepoMock.getMultisigAccountInfo(deepEqualParam(subscribedAddress))).thenReturn(observableOf(multisigInfo));
-                when(namespaceRepoMock.getAccountsNames(deepEqualParam([subscribedAddress]))).thenReturn(
-                    observableOf([new AccountNames(subscribedAddress, [new NamespaceName(alias, 'test')])]),
+                when(multisigRepoMock.getMultisigAccountGraphInfo(deepEqualParam(account2))).thenReturn(
+                    observableOf(givenMultisig2AccountGraphInfo()),
+                );
+                when(namespaceRepoMock.getAccountsNames(deepEqualParam([account2]))).thenReturn(
+                    observableOf([new AccountNames(account2, [new NamespaceName(alias, 'test')])]),
                 );
                 const transferTransaction = TransferTransaction.create(
                     Deadline.create(epochAdjustment),
-                    multisigAccount.address,
+                    multisig2,
                     [],
                     PlainMessage.create('test-message'),
                     NetworkType.PRIVATE_TEST,
@@ -277,7 +307,7 @@ describe('Listener', () => {
 
                 const listener = new Listener('http://localhost:3000', namespaceRepo, WebSocketMultisigMock, multisigRepo);
                 listener.open();
-                subscriptionMethod(listener, subscribedAddress, hash, true).subscribe();
+                subscriptionMethod(listener, account2, hash, true).subscribe();
 
                 listener.handleMessage(
                     {
@@ -377,8 +407,6 @@ describe('Listener', () => {
             });
 
             it('Using invalid no hash', () => {
-                const subscribedAddress = account.address;
-
                 const alias = new NamespaceId('test');
                 const transferTransaction = TransferTransaction.create(
                     Deadline.create(epochAdjustment),
@@ -511,7 +539,6 @@ describe('Listener', () => {
 
     [ListenerChannelName.unconfirmedRemoved, ListenerChannelName.partialRemoved].forEach((name) => {
         const subscribedAddress = account.address;
-        const multisigAccount = Account.generateNewAccount(NetworkType.PRIVATE_TEST);
         class WebSocketMock {
             constructor(public readonly url: string) {}
             send(payload: string): void {
@@ -539,20 +566,20 @@ describe('Listener', () => {
 
         describe(`${name} transaction subscription`, () => {
             it('subscribe multsig', () => {
-                const multisigInfo = new MultisigAccountInfo(1, subscribedAddress, 1, 1, [], [multisigAccount.address]);
-                when(multisigRepoMock.getMultisigAccountInfo(deepEqualParam(subscribedAddress))).thenReturn(observableOf(multisigInfo));
+                when(multisigRepoMock.getMultisigAccountGraphInfo(deepEqualParam(account2))).thenReturn(
+                    observableOf(givenMultisig2AccountGraphInfo()),
+                );
                 const hash = 'abc';
                 const message = {
-                    topic: `${name.toString()}/${subscribedAddress.plain()}`,
+                    topic: `${name.toString()}/${account2.plain()}`,
                     data: { meta: { height: '1', hash: hash } },
                 };
 
                 const listener = new Listener('http://localhost:3000', namespaceRepo, WebSocketMultisigMock, multisigRepo);
                 listener.open();
-                subscriptionMethod(listener, subscribedAddress, hash, true).subscribe();
+                subscriptionMethod(listener, account2, hash, true).subscribe();
 
                 listener.handleMessage(message, null);
-
                 expect(multisigIndex).to.be.equal(2);
             });
         });
